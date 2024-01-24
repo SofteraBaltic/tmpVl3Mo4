@@ -1,0 +1,86 @@
+name: 'Add existing app or test app'
+
+run-name: "Add existing app or test app in [${{ github.ref_name }}]"
+
+on:
+  workflow_dispatch:
+    inputs:
+      project:
+        description: Project name if the repository is setup for multiple projects
+        required: false
+        default: '.'
+      url:
+        description: Direct Download Url of .app or .zip file
+        required: true
+      directCommit:
+        description: Direct Commit?
+        type: boolean
+        default: false
+      useGhTokenWorkflow:
+        description: Use GhTokenWorkflow for PR/Commit?
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+defaults:
+  run:
+    shell: pwsh
+
+env:
+  ALGoOrgSettings: ${{ vars.ALGoOrgSettings }}
+  ALGoRepoSettings: ${{ vars.ALGoRepoSettings }}
+
+jobs:
+  AddExistingAppOrTestApp:
+    needs: [ ]
+    runs-on: [ ubuntu-latest ]
+    steps:
+      - name: Dump Workflow Information
+        uses: SofteraBaltic/tmpHOT5wY-Actions/DumpWorkflowInfo@main
+        with:
+          shell: pwsh
+
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Initialize the workflow
+        id: init
+        uses: SofteraBaltic/tmpHOT5wY-Actions/WorkflowInitialize@main
+        with:
+          shell: pwsh
+          eventId: "DO0090"
+
+      - name: Read settings
+        uses: SofteraBaltic/tmpHOT5wY-Actions/ReadSettings@main
+        with:
+          shell: pwsh
+
+      - name: Read secrets
+        id: ReadSecrets
+        uses: SofteraBaltic/tmpHOT5wY-Actions/ReadSecrets@main
+        with:
+          shell: pwsh
+          gitHubSecrets: ${{ toJson(secrets) }}
+          getSecrets: 'TokenForPush'
+          useGhTokenWorkflowForPush: '${{ github.event.inputs.useGhTokenWorkflow }}'
+
+      - name: Add existing app
+        uses: SofteraBaltic/tmpHOT5wY-Actions/AddExistingApp@main
+        with:
+          shell: pwsh
+          token: ${{ steps.ReadSecrets.outputs.TokenForPush }}
+          parentTelemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
+          project: ${{ github.event.inputs.project }}
+          url: ${{ github.event.inputs.url }}
+          directCommit: ${{ github.event.inputs.directCommit }}
+
+      - name: Finalize the workflow
+        if: always()
+        uses: SofteraBaltic/tmpHOT5wY-Actions/WorkflowPostProcess@main
+        with:
+          shell: pwsh
+          eventId: "DO0090"
+          telemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}

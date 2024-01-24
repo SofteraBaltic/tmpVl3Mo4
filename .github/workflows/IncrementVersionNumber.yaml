@@ -1,0 +1,86 @@
+name: ' Increment Version Number'
+
+run-name: "Increment Version Number in [${{ github.ref_name }}]"
+
+on:
+  workflow_dispatch:
+    inputs:
+      projects:
+        description: Comma-separated list of project name patterns if the repository is setup for multiple projects (default is * for all projects)
+        required: false
+        default: '*'
+      versionNumber:
+        description: Updated Version Number. Use Major.Minor for absolute change, use +Major.Minor for incremental change.
+        required: true
+      directCommit:
+        description: Direct Commit?
+        type: boolean
+        default: false
+      useGhTokenWorkflow:
+        description: Use GhTokenWorkflow for PR/Commit?
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+defaults:
+  run:
+    shell: pwsh
+
+env:
+  ALGoOrgSettings: ${{ vars.ALGoOrgSettings }}
+  ALGoRepoSettings: ${{ vars.ALGoRepoSettings }}
+
+jobs:
+  IncrementVersionNumber:
+    needs: [ ]
+    runs-on: [ ubuntu-latest ]
+    steps:
+      - name: Dump Workflow Information
+        uses: SofteraBaltic/tmpHOT5wY-Actions/DumpWorkflowInfo@main
+        with:
+          shell: pwsh
+
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Initialize the workflow
+        id: init
+        uses: SofteraBaltic/tmpHOT5wY-Actions/WorkflowInitialize@main
+        with:
+          shell: pwsh
+          eventId: "DO0096"
+
+      - name: Read settings
+        uses: SofteraBaltic/tmpHOT5wY-Actions/ReadSettings@main
+        with:
+          shell: pwsh
+
+      - name: Read secrets
+        id: ReadSecrets
+        uses: SofteraBaltic/tmpHOT5wY-Actions/ReadSecrets@main
+        with:
+          shell: pwsh
+          gitHubSecrets: ${{ toJson(secrets) }}
+          getSecrets: 'TokenForPush'
+          useGhTokenWorkflowForPush: '${{ github.event.inputs.useGhTokenWorkflow }}'
+
+      - name: Increment Version Number
+        uses: SofteraBaltic/tmpHOT5wY-Actions/IncrementVersionNumber@main
+        with:
+          shell: pwsh
+          token: ${{ steps.ReadSecrets.outputs.TokenForPush }}
+          parentTelemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
+          projects: ${{ github.event.inputs.projects }}
+          versionNumber: ${{ github.event.inputs.versionNumber }}
+          directCommit: ${{ github.event.inputs.directCommit }}
+
+      - name: Finalize the workflow
+        if: always()
+        uses: SofteraBaltic/tmpHOT5wY-Actions/WorkflowPostProcess@main
+        with:
+          shell: pwsh
+          eventId: "DO0096"
+          telemetryScopeJson: ${{ steps.init.outputs.telemetryScopeJson }}
